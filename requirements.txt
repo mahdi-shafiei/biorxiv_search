@@ -7,3 +7,4 @@ faiss-cpu
 transformers
 plotly
 python-doi
+groq

@@ -9,6 +9,7 @@ import time
 import plotly.express as px
 import doi
 import requests
+from groq import Groq
 
 API_URL = (
     "https://api-inference.huggingface.co/models/mixedbread-ai/mxbai-embed-large-v1"
@@ -228,6 +229,28 @@ def load_data_embeddings():
 
     return df_combined, embeddings_combined
 
+def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions='Summarize this abstract condensed into one to two sentences and write most important keywords at the end:'):
+    """
+    Summarizes the provided abstract using a specified LLM model.
+    
+    Parameters:
+    - abstract (str): The abstract text to be summarized.
+    - llm_model (str): The LLM model used for summarization. Defaults to "mixtral-8x7b-32768".
+    
+    Returns:
+    - str: A summary of the abstract, condensed into one to two sentences.
+    """
+    # Initialize the Groq client with the API key from environment variables
+    client = Groq(api_key=st.secrets["groq_token"])
+    
+    # Create a chat completion with the abstract and specified LLM model
+    chat_completion = client.chat.completions.create(
+        messages=[{"role": "user", "content": f'{instructions} "{abstract}"'}],
+        model=llm_model,
+    )
+    
+    # Return the summarized content
+    return chat_completion.choices[0].message.content
 
 ### To use with local setup
 # @st.cache_resource()
@@ -300,9 +323,14 @@ corpus_index = None
 corpus_precision = "ubinary"
 
 query = st.text_input("Enter your search query:")
-num_to_show = st.number_input(
-    "Number of results to show:", min_value=1, max_value=500, value=10
-)
+
+col1, col2 = st.columns(2)
+with col1:
+    num_to_show = st.number_input(
+        "Number of results to show:", min_value=1, max_value=500, value=10
+    )
+with col2:
+    use_ai = st.checkbox('Use AI generated summary? (Groq Mixtral 8x7b, temporary support)')
 
 if query:
     with st.spinner("Searching..."):
@@ -350,6 +378,8 @@ if query:
         # Normalize scores. The best score (min_score) becomes 100%, and the worst score (max_score) gets a value above 0%.
         search_df["score"] = abs(search_df["score"] - max_score) + min_score
 
+        abstracts = []
+        
         # Iterate over each row in the search_df DataFrame
         for index, entry in search_df.iterrows():
             row = df.iloc[int(entry["corpus_id"])]
@@ -364,7 +394,7 @@ if query:
             plot_data["DOI"].append(row["doi"])
             plot_data["category"].append(row["category"])
 
-            # summary_text = query_hf_api(row['abstract'], api=summarization_API_URL)
+            #summary_text = summarize_abstract(row['abstract'])
 
             with st.expander(f"{row['title']}"):
                 st.markdown(f"**Score:** {entry['score']:.1f}")
@@ -372,7 +402,8 @@ if query:
                 col1, col2 = st.columns(2)
                 col2.markdown(f"**Category:** {row['category']}")
                 col1.markdown(f"**Date:** {row['date']}")
-                # st.markdown(f"**Summary:**\n{summary_text}", unsafe_allow_html=False)
+                #st.markdown(f"**Summary:**\n{summary_text}", unsafe_allow_html=False)
+                abstracts.append(row['abstract'])
                 st.markdown(
                     f"**Abstract:**\n{row['abstract']}", unsafe_allow_html=False
                 )
@@ -388,6 +419,13 @@ if query:
         # Sort the DataFrame based on the Date to make sure it's ordered
         plot_df = plot_df.sort_values(by="Date")
 
+        if use_ai:
+            ai_gen_start = time.time()
+            st.markdown('**AI Summary of 10 abstracts:**')
+            st.markdown(summarize_abstract(abstracts[:9], instructions='Provide a concise summary of the abstracts, emphasizing the important common ideas and reply in markdown: '))
+            total_ai_time = time.time()-ai_gen_start
+            st.markdown(f'**Time to generate summary:** {total_ai_time:.2f} s')
+        
         # Create a Plotly figure
         fig = px.scatter(
             plot_df,
