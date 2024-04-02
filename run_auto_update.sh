@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Pull the latest changes from your GitHub repository
-git pull origin main
-
 # Install dependencies from requirements.txt
 pip install -r requirements.txt
 

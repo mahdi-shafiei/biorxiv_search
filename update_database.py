@@ -222,21 +222,26 @@ db_update_directory = 'db_update'
 embed_update_directory = 'embed_update'
 unprocessed_dataframes = load_unprocessed_parquets(db_update_directory, embed_update_directory)
 
-for file in unprocessed_dataframes:
-    df = pd.read_parquet(file)
-    query = df['abstract'].tolist()
+if unprocessed_dataframes:
+    for file in unprocessed_dataframes:
+        df = pd.read_parquet(file)
+        query = df['abstract'].tolist()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
-    model.to(device)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
+        model.to(device)
 
-    query_embedding = model.encode(query, normalize_embeddings=True, precision='ubinary', show_progress_bar=True)
-    embeddings_path = f'embed_update/{os.path.basename(file).split('.')[0]}'
-    np.save(embeddings_path, query_embedding)
-    print(f'Saved embeddings {embeddings_path}')
-    
-# remove old json directory
+        query_embedding = model.encode(query, normalize_embeddings=True, precision='ubinary', show_progress_bar=True)
+        file_path=os.path.basename(file).split('.')[0]
+        embeddings_path = f'embed_update/{file_path}'
+        np.save(embeddings_path, query_embedding)
+        print(f'Saved embeddings {embeddings_path}')
+        
+    # remove old json directory
 
-db_update_json = 'db_update_json'
-shutil.rmtree(db_update_json)
-print(f"Directory '{db_update_json}' and its contents have been removed.")
+    db_update_json = 'db_update_json'
+    shutil.rmtree(db_update_json)
+    print(f"Directory '{db_update_json}' and its contents have been removed.")
+
+else:
+    print('Nothing to do')
