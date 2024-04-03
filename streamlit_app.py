@@ -229,7 +229,7 @@ def load_data_embeddings():
 
     return df_combined, embeddings_combined
 
-def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions='Summarize this abstract condensed into one to two sentences and write most important keywords at the end:'):
+def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions="Review the abstracts listed below and create a list and summary that captures their main themes and findings. Identify any commonalities across the abstracts and highlight these in your summary. Ensure your response is concise, avoids external links, and is formatted in markdown.\n\n"):
     """
     Summarizes the provided abstract using a specified LLM model.
     
@@ -243,9 +243,11 @@ def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions='S
     # Initialize the Groq client with the API key from environment variables
     client = Groq(api_key=st.secrets["groq_token"])
     
+    formatted_text = "\n".join(f"{idx + 1}. {abstract}" for idx, abstract in enumerate(abstracts))
+
     # Create a chat completion with the abstract and specified LLM model
     chat_completion = client.chat.completions.create(
-        messages=[{"role": "user", "content": f'{instructions} "{abstract}"'}],
+        messages=[{"role": "user", "content": f'{instructions} "{formatted_text}"'}],
         model=llm_model,
     )
     
@@ -422,7 +424,7 @@ if query:
         if use_ai:
             ai_gen_start = time.time()
             st.markdown('**AI Summary of 10 abstracts:**')
-            st.markdown(summarize_abstract(abstracts[:9], instructions='Provide a concise summary of the abstracts, emphasizing the important common ideas and reply in markdown: '))
+            st.markdown(summarize_abstract(abstracts[:9]))
             total_ai_time = time.time()-ai_gen_start
             st.markdown(f'**Time to generate summary:** {total_ai_time:.2f} s')
         
