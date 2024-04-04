@@ -235,7 +235,7 @@ def load_data_embeddings():
 
 LLM_prompt = "Review the abstracts listed below and create a list and summary that captures their main themes and findings. Identify any commonalities across the abstracts and highlight these in your summary. Ensure your response is concise, avoids external links, and is formatted in markdown.\n\n"
 
-def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions=LLM_prompt):
+def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions=LLM_prompt, api_key=st.secrets["groq_token"]):
     """
     Summarizes the provided abstract using a specified LLM model.
     
@@ -247,7 +247,7 @@ def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions=LL
     - str: A summary of the abstract, condensed into one to two sentences.
     """
     # Initialize the Groq client with the API key from environment variables
-    client = Groq(api_key=st.secrets["groq_token"])
+    client = Groq(api_key=api_key)
     
     formatted_text = "\n".join(f"{idx + 1}. {abstract}" for idx, abstract in enumerate(abstracts))
     try:
@@ -444,7 +444,7 @@ if query:
             if not use_hf:
                 ai_gen_start = time.time()
                 st.markdown('**AI Summary of 10 abstracts:**')
-                st.markdown(summarize_abstract(abstracts[:9]))
+                st.markdown(summarize_abstract(abstracts[:9], api_key=str(groq_api_provided)))
                 total_ai_time = time.time()-ai_gen_start
                 st.markdown(f'**Time to generate summary:** {total_ai_time:.2f} s')
             
