@@ -18,6 +18,10 @@ summarization_API_URL = (
     "https://api-inference.huggingface.co/models/Falconsai/text_summarization"
 )
 
+LLM_API_URL = (
+    "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+)
+
 API_TOKEN = st.secrets["hf_token"]  # Replace with your Hugging Face API token
 
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
@@ -229,7 +233,9 @@ def load_data_embeddings():
 
     return df_combined, embeddings_combined
 
-def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions="Review the abstracts listed below and create a list and summary that captures their main themes and findings. Identify any commonalities across the abstracts and highlight these in your summary. Ensure your response is concise, avoids external links, and is formatted in markdown.\n\n"):
+LLM_prompt = "Review the abstracts listed below and create a list and summary that captures their main themes and findings. Identify any commonalities across the abstracts and highlight these in your summary. Ensure your response is concise, avoids external links, and is formatted in markdown.\n\n"
+
+def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions=LLM_prompt):
     """
     Summarizes the provided abstract using a specified LLM model.
     
@@ -244,12 +250,15 @@ def summarize_abstract(abstract, llm_model="mixtral-8x7b-32768", instructions="R
     client = Groq(api_key=st.secrets["groq_token"])
     
     formatted_text = "\n".join(f"{idx + 1}. {abstract}" for idx, abstract in enumerate(abstracts))
-
-    # Create a chat completion with the abstract and specified LLM model
-    chat_completion = client.chat.completions.create(
-        messages=[{"role": "user", "content": f'{instructions} "{formatted_text}"'}],
-        model=llm_model,
-    )
+    try:
+        # Create a chat completion with the abstract and specified LLM model
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": f'{instructions} "{formatted_text}"'}],
+            model=llm_model,
+        )
+    except:
+        return 'Groq model not available or above the usage limit. Use own API key from here: https://console.groq.com/keys'
+        
     
     # Return the summarized content
     return chat_completion.choices[0].message.content
@@ -323,16 +332,23 @@ logo(df["date"].max(), df.shape[0])
 
 corpus_index = None
 corpus_precision = "ubinary"
+use_hf = False 
 
 query = st.text_input("Enter your search query:")
 
 col1, col2 = st.columns(2)
 with col1:
     num_to_show = st.number_input(
-        "Number of results to show:", min_value=1, max_value=500, value=10
+        "Number of results to show:", min_value=1, max_value=50, value=10
     )
 with col2:
-    use_ai = st.checkbox('Use AI generated summary? (Groq Mixtral 8x7b, temporary support)')
+    use_ai = st.checkbox('Use AI generated summary?')
+
+if use_ai:
+    with col2:
+        groq_api_provided = st.text_input('Own Groq API KEY to remove limits', '', help='To obtain own Groq key go to https://console.groq.com/keys')
+        #use_hf = st.checkbox('Use free HF gemma 2B instead? (poor quality)')
+
 
 if query:
     with st.spinner("Searching..."):
@@ -387,7 +403,10 @@ if query:
             row = df.iloc[int(entry["corpus_id"])]
 
             # Construct the DOI link
-            doi_link = f"{doi.get_real_url_from_doi(row['doi'])}"
+            try:
+                doi_link = f"{doi.get_real_url_from_doi(row['doi'])}"
+            except:
+                doi_link = f'https://www.doi.org/'+row['doi']
 
             # Append information to plot_data for visualization
             plot_data["Date"].append(row["date"])
@@ -422,12 +441,26 @@ if query:
         plot_df = plot_df.sort_values(by="Date")
 
         if use_ai:
-            ai_gen_start = time.time()
-            st.markdown('**AI Summary of 10 abstracts:**')
-            st.markdown(summarize_abstract(abstracts[:9]))
-            total_ai_time = time.time()-ai_gen_start
-            st.markdown(f'**Time to generate summary:** {total_ai_time:.2f} s')
-        
+            if not use_hf:
+                ai_gen_start = time.time()
+                st.markdown('**AI Summary of 10 abstracts:**')
+                st.markdown(summarize_abstract(abstracts[:9]))
+                total_ai_time = time.time()-ai_gen_start
+                st.markdown(f'**Time to generate summary:** {total_ai_time:.2f} s')
+            
+            # Need to figure our how to get it from huggingface
+            else:
+                ai_gen_start = time.time()
+                st.markdown('**AI Summary of 10 abstracts:**')
+                formatted_text = str(LLM_prompt+"\n".join(f"{idx + 1}. {abstract}" for idx, abstract in enumerate(abstracts[:9])))
+                prompt = f"Human: \n {formatted_text}\n\n AI:"
+                LLM_answer = query_hf_api(formatted_text, summarization_API_URL)[0] #['generated_text']
+                if 'AI:' in LLM_answer:
+                    LLM_answer = LLM_answer.split('AI: ')[1]
+                st.markdown(LLM_answer)
+                total_ai_time = time.time()-ai_gen_start
+                st.markdown(f'**Time to generate summary:** {total_ai_time:.2f} s')
+            
         # Create a Plotly figure
         fig = px.scatter(
             plot_df,
