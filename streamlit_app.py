@@ -347,6 +347,8 @@ with col2:
 if use_ai:
     with col2:
         groq_api_provided = st.text_input('Own Groq API KEY to remove limits', '', help='To obtain own Groq key go to https://console.groq.com/keys')
+        if not groq_api_provided:
+            groq_api_provided = st.secrets["groq_token"]
         #use_hf = st.checkbox('Use free HF gemma 2B instead? (poor quality)')
 
 
