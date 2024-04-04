@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Install dependencies from requirements.txt
-pip install -r requirements.txt
-
 # Run your Python script to update the database
 python update_database.py
 
