@@ -1,5 +1,15 @@
 ### bioRxiv Manuscript Semantic Search (bMSS)
 
+---
+
+### Links to the tool (mirrored):
+
+* https://biorxiv-search.streamlit.app/
+
+* https://huggingface.co/spaces/dzyla/bmss
+
+  ---
+
 ### Purpose:
 The Manuscript Semantic Search (bMSS) is a Streamlit-based web application designed for semantic search of scientific manuscripts. It leverages the Hugging Face API and Sentence Transformers to encode search queries and perform semantic searches over a corpus of manuscript embeddings. The application aims to provide an efficient and user-friendly interface for querying scientific articles, supporting researchers in finding relevant literature based on semantic content rather than keyword matching alone.
 
