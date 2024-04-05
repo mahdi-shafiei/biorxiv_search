@@ -158,6 +158,13 @@ def process_json_files(directory, save_directory):
         parquet_filename = f"{json_file.stem}.parquet"
         save_path = os.path.join(save_directory, parquet_filename)
         
+        # If the embedding for this file already exists, remove it
+        if os.path.exists(save_path):
+            npy_file_path = save_path.replace('db_update', 'embed_update').replace('parquet', 'npy')
+            if os.path.exists(npy_file_path):
+                os.remove(npy_file_path)
+                print(f'Removed embedding file {npy_file_path} due to the dataframe update')
+                
         # Save the DataFrame to Parquet format
         save_dataframe(df, save_path)
         print(f"Processed and saved {json_file.name} to {parquet_filename}")

@@ -419,7 +419,7 @@ if query:
 
             #summary_text = summarize_abstract(row['abstract'])
 
-            with st.expander(f"{row['title']}"):
+            with st.expander(f"{index+1}\. {row['title']}"): # type: ignore
                 st.markdown(f"**Score:** {entry['score']:.1f}")
                 st.markdown(f"**Authors:** {row['authors']}")
                 col1, col2 = st.columns(2)
