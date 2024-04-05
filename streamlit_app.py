@@ -45,11 +45,26 @@ def query_hf_api(text, api=API_URL, parameters=None):
         st.error("Failed to get a valid response from the server. Please try again later.")
         return {}
 
+    # Prepare an empty placeholder that can be filled if needed
+    progress_placeholder = st.empty()
+
     # Check if the model is currently loading
     if "error" in response_data and "loading" in response_data["error"]:
         estimated_time = response_data.get("estimated_time", 30)  # Default wait time to 30 seconds if not provided
-        st.warning(f"Model from :hugging_face: is currently loading. Estimated wait time: {estimated_time:.1f} seconds. Please wait...")
-        time.sleep(estimated_time + 5)  # Adding a buffer time to ensure the model is loaded
+        with progress_placeholder.container():
+            st.warning(f"Model from :hugging_face: is currently loading. Estimated wait time: {estimated_time:.1f} seconds. Please wait...")
+            
+            # Create a progress bar within the container
+            progress_bar = st.progress(0)
+            for i in range(int(estimated_time) + 5):  # Adding a buffer time to ensure the model is loaded
+                # Update progress bar. The factor of 100 is used to convert to percentage completion
+                progress = int((i / (estimated_time + 5)) * 100)
+                progress_bar.progress(progress)
+                time.sleep(1)  # Wait for a second
+
+        # Clear the placeholder once loading is complete
+        progress_placeholder.empty()
+        
         st.rerun()  # Rerun the app after waiting
 
     return response_data
