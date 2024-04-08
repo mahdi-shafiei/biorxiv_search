@@ -43,3 +43,4 @@ The Manuscript Semantic Search (bMSS) is a Streamlit-based web application desig
 
 **Update**
 1. `bash run_auto_update.sh`
+2. Or python update_database.py
